@@ -23,38 +23,8 @@
     <ZeroClawAllowedHosts>api.example.com</ZeroClawAllowedHosts>
   </PropertyGroup>
 
-  <!-- Define the tools this plugin exposes -->
-  <ItemGroup>
-    <ZeroClawTool Include="greet"
-                  Description="Greet a user by name"
-                  Export="greet"
-                  RiskLevel="low"
-                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
-
-    <ZeroClawTool Include="add"
-                  Description="Add two numbers together"
-                  Export="add"
-                  RiskLevel="low"
-                  ParametersSchema='{ "type": "object", "properties": { "a": { "type": "integer" }, "b": { "type": "integer" } }, "required": ["a", "b"] }' />
-
-    <ZeroClawTool Include="remember"
-                  Description="Store and recall data from memory"
-                  Export="remember"
-                  RiskLevel="medium"
-                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
-
-    <ZeroClawTool Include="notify"
-                  Description="Send a notification via messaging channels"
-                  Export="notify"
-                  RiskLevel="medium"
-                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
-
-    <ZeroClawTool Include="search_and_greet"
-                  Description="Search for info about a user and greet them"
-                  Export="search_and_greet"
-                  RiskLevel="medium"
-                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
-  </ItemGroup>
+  <!-- Tools are now auto-discovered from [ZeroClawFunction] attributes! -->
+  <!-- No need to manually define ZeroClawTool items -->
 
   <ItemGroup>
     <ProjectReference Include="../../src/ZeroClaw.PluginSdk.csproj" />

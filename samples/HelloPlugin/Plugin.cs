@@ -20,7 +20,7 @@ public static class Plugin
     /// <summary>
     /// A simple greeting function that takes a name and returns a greeting message.
     /// </summary>
-    [PluginFunction("greet")]
+    [ZeroClawFunction("greet", "Greet a user by name and welcome them to ZeroClaw")]
     [UnmanagedCallersOnly(EntryPoint = "greet")]
     public static int Greet()
     {
@@ -31,7 +31,7 @@ public static class Plugin
     /// <summary>
     /// A simple add function that demonstrates numeric operations.
     /// </summary>
-    [PluginFunction("add")]
+    [ZeroClawFunction("add", "Add two numbers together")]
     [UnmanagedCallersOnly(EntryPoint = "add")]
     public static int Add()
     {
@@ -42,7 +42,7 @@ public static class Plugin
     /// <summary>
     /// Demonstrates using the Memory API to store and recall data.
     /// </summary>
-    [PluginFunction("remember")]
+    [ZeroClawFunction("remember", "Store and recall data from agent memory", RiskLevel = "medium")]
     [UnmanagedCallersOnly(EntryPoint = "remember")]
     public static int Remember()
     {
@@ -61,7 +61,7 @@ public static class Plugin
     /// <summary>
     /// Demonstrates using the Messaging API.
     /// </summary>
-    [PluginFunction("notify")]
+    [ZeroClawFunction("notify", "Send a notification via messaging channels", RiskLevel = "medium")]
     [UnmanagedCallersOnly(EntryPoint = "notify")]
     public static int Notify()
     {
@@ -83,7 +83,7 @@ public static class Plugin
     /// <summary>
     /// Demonstrates calling other tools from within a plugin.
     /// </summary>
-    [PluginFunction("search_and_greet")]
+    [ZeroClawFunction("search_and_greet", "Search for info about a user and greet them", RiskLevel = "medium")]
     [UnmanagedCallersOnly(EntryPoint = "search_and_greet")]
     public static int SearchAndGreet()
     {

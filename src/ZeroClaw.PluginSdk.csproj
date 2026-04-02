@@ -11,10 +11,10 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>ZeroClaw.PluginSdk</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>ZeroClaw Contributors</Authors>
     <Company>ZeroClaw</Company>
-    <Description>SDK for building ZeroClaw WASM plugins in C#. Provides easy access to ZeroClaw's memory, messaging, and tool APIs with full JSON serialization support.</Description>
+    <Description>SDK for building ZeroClaw WASM plugins in C#. Provides easy access to ZeroClaw's memory, messaging, and tool APIs with full JSON serialization support. Auto-generates plugin.toml from attributes.</Description>
     <PackageTags>zeroclaw;wasm;plugin;extism;ai;agent</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Biztactix-Ryan/zeroclaw</PackageProjectUrl>
@@ -25,7 +25,16 @@
     <!-- Enable XML documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- Include dependencies for analyzers -->
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <DevelopmentDependency>false</DevelopmentDependency>
   </PropertyGroup>
+
+  <!-- Exclude generator source from SDK compilation -->
+  <ItemGroup>
+    <Compile Remove="Generators/**" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Extism PDK - brings in all WASM dependencies automatically -->

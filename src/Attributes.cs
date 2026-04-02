@@ -1,39 +1,64 @@
 namespace ZeroClaw.PluginSdk;
 
 /// <summary>
-/// Marks a static method as a ZeroClaw plugin tool.
-/// The build process discovers methods with this attribute and
-/// generates the plugin.toml manifest automatically.
+/// Marks a static method as a ZeroClaw plugin function/tool.
+/// The source generator discovers methods with this attribute and
+/// auto-generates the plugin.toml manifest.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public sealed class PluginFunctionAttribute : Attribute
+public sealed class ZeroClawFunctionAttribute : Attribute
 {
     /// <summary>
-    /// The exported function name (entry point in WASM).
-    /// If not specified, uses the method name in snake_case.
+    /// The tool name exposed to ZeroClaw. Required.
     /// </summary>
-    public string? Name { get; }
+    public string Name { get; }
 
     /// <summary>
-    /// Human-readable description of what the tool does.
+    /// Human-readable description of what the tool does. Required.
     /// </summary>
-    public string Description { get; set; } = "";
+    public string Description { get; }
 
     /// <summary>
-    /// Risk level: "low", "medium", or "high".
+    /// Risk level: "low", "medium", or "high". Defaults to "low".
     /// </summary>
     public string RiskLevel { get; set; } = "low";
 
-    /// <summary>
-    /// JSON Schema for the tool's input parameters.
-    /// Defaults to { "type": "object" } if not specified.
-    /// </summary>
-    public string ParametersSchema { get; set; } = """{"type":"object"}""";
-
-    public PluginFunctionAttribute(string? name = null)
+    public ZeroClawFunctionAttribute(string name, string description)
     {
         Name = name;
+        Description = description;
     }
+}
+
+/// <summary>
+/// Specifies the JSON Schema for a tool's input parameters.
+/// Apply to the input type (record/class) used by the tool.
+/// If not specified, schema is auto-generated from the type's properties.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
+public sealed class ZeroClawSchemaAttribute : Attribute
+{
+    /// <summary>
+    /// Raw JSON Schema string. If provided, overrides auto-generation.
+    /// </summary>
+    public string? Schema { get; set; }
+}
+
+/// <summary>
+/// Provides additional metadata for a property in the JSON Schema.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter, AllowMultiple = false)]
+public sealed class ZeroClawPropertyAttribute : Attribute
+{
+    /// <summary>
+    /// Description of this property for the JSON Schema.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Whether this property is required. Defaults to true for non-nullable types.
+    /// </summary>
+    public bool Required { get; set; } = true;
 }
 
 /// <summary>
@@ -81,4 +106,22 @@ public sealed class ZeroClawPluginAttribute : Attribute
     /// Filesystem allowed paths as "virtual=real,virtual2=real2" pairs.
     /// </summary>
     public string AllowedPaths { get; set; } = "";
+}
+
+// Keep the old attribute name as an alias for backwards compatibility
+/// <summary>
+/// Alias for ZeroClawFunctionAttribute. Prefer using ZeroClawFunctionAttribute.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+public sealed class PluginFunctionAttribute : Attribute
+{
+    public string? Name { get; }
+    public string Description { get; set; } = "";
+    public string RiskLevel { get; set; } = "low";
+    public string ParametersSchema { get; set; } = """{"type":"object"}""";
+
+    public PluginFunctionAttribute(string? name = null)
+    {
+        Name = name;
+    }
 }

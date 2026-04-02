@@ -1,12 +1,82 @@
 <Project>
+
+  <!-- Inline task to extract ZeroClaw tool definitions from source files -->
+  <UsingTask TaskName="ExtractZeroClawToolsFromSource" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <SourceFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <ToolsToml Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Using Namespace="System.Collections.Generic" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var sb = new StringBuilder();
+
+        // Regex to match [ZeroClawFunction("name", "description")] with optional RiskLevel
+        var attrRegex = new Regex(
+            @"\[ZeroClawFunction\s*\(\s*""([^""]+)""\s*,\s*""([^""]+)""(?:[^)]*RiskLevel\s*=\s*""([^""]+)"")?\s*\)\]",
+            RegexOptions.Singleline);
+
+        var foundTools = new HashSet<string>();
+
+        foreach (var item in SourceFiles)
+        {
+            var path = item.ItemSpec;
+            if (!File.Exists(path)) continue;
+
+            var content = File.ReadAllText(path);
+
+            foreach (Match match in attrRegex.Matches(content))
+            {
+                var name = match.Groups[1].Value;
+                var description = match.Groups[2].Value;
+                var riskLevel = match.Groups[3].Success && !string.IsNullOrEmpty(match.Groups[3].Value)
+                    ? match.Groups[3].Value
+                    : "low";
+
+                // Avoid duplicates
+                if (foundTools.Contains(name)) continue;
+                foundTools.Add(name);
+
+                sb.AppendLine();
+                sb.AppendLine("[[tools]]");
+                sb.AppendLine($"name = \"{name}\"");
+                sb.AppendLine($"description = \"{description}\"");
+                sb.AppendLine($"export = \"{name}\"");
+                sb.AppendLine($"risk_level = \"{riskLevel}\"");
+                sb.AppendLine("parameters_schema = { \"type\": \"object\" }");
+            }
+        }
+
+        ToolsToml = sb.ToString();
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
   <!-- Generate plugin.toml after successful WASM build -->
   <Target Name="GenerateZeroClawPluginManifest"
           AfterTargets="Build"
           Condition="'$(RuntimeIdentifier)' == 'wasi-wasm' AND '$(ZeroClawGenerateManifest)' == 'true'">
 
+    <!-- Collect source files -->
+    <ItemGroup>
+      <_ZeroClawSourceFiles Include="@(Compile)" Condition="'%(Extension)' == '.cs'" />
+    </ItemGroup>
+
+    <!-- Extract tools from source files -->
+    <ExtractZeroClawToolsFromSource SourceFiles="@(_ZeroClawSourceFiles)">
+      <Output TaskParameter="ToolsToml" PropertyName="_ExtractedToolsToml" />
+    </ExtractZeroClawToolsFromSource>
+
     <PropertyGroup>
       <_WasmFileName>$(ZeroClawWasmPath)</_WasmFileName>
       <_PluginTomlPath>$(OutputPath)plugin.toml</_PluginTomlPath>
+      <_HasExtractedTools>false</_HasExtractedTools>
+      <_HasExtractedTools Condition="'$(_ExtractedToolsToml)' != ''">true</_HasExtractedTools>
+      <_HasManualTools>false</_HasManualTools>
+      <_HasManualTools Condition="'@(ZeroClawTool)' != ''">true</_HasManualTools>
     </PropertyGroup>
 
     <!-- Split comma-separated strings into items if ItemGroups weren't used -->
@@ -48,25 +118,31 @@ capabilities = [$(_CapabilitiesArray)]
 </_PluginSection>
     </PropertyGroup>
 
-    <!-- Generate tools section -->
+    <!-- Generate tools section from manual ItemGroup definitions (fallback) -->
     <PropertyGroup>
-      <_ToolsSection></_ToolsSection>
+      <_ManualToolsSection></_ManualToolsSection>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'@(ZeroClawTool)' != ''">
-      <_ToolsSection>@(ZeroClawTool->'
+    <PropertyGroup Condition="'$(_HasManualTools)' == 'true' AND '$(_HasExtractedTools)' != 'true'">
+      <_ManualToolsSection>@(ZeroClawTool->'
 [[tools]]
 name = &quot;%(Identity)&quot;
 description = &quot;%(Description)&quot;
 export = &quot;%(Export)&quot;
 risk_level = &quot;%(RiskLevel)&quot;
 parameters_schema = %(ParametersSchema)
-', '')</_ToolsSection>
+', '')</_ManualToolsSection>
+    </PropertyGroup>
+
+    <!-- Combine everything -->
+    <PropertyGroup>
+      <_FinalToolsSection>$(_ExtractedToolsToml)</_FinalToolsSection>
+      <_FinalToolsSection Condition="'$(_HasExtractedTools)' != 'true'">$(_ManualToolsSection)</_FinalToolsSection>
     </PropertyGroup>
 
     <!-- Write the file -->
     <WriteLinesToFile File="$(_PluginTomlPath)"
-                      Lines="$(_PluginSection)$(_ToolsSection)"
+                      Lines="$(_PluginSection)$(_FinalToolsSection)"
                       Overwrite="true"
                       Encoding="UTF-8" />
 

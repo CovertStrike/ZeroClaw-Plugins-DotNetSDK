@@ -1,6 +1,6 @@
 # ZeroClaw.PluginSdk
 
-A simple .NET SDK for building ZeroClaw WASM plugins. Just add the NuGet package and start writing plugins - the SDK handles WASM compilation and automatically generates `plugin.toml` manifests.
+A simple .NET SDK for building ZeroClaw WASM plugins. Just add the NuGet package, decorate your functions with `[ZeroClawFunction]`, and the SDK automatically generates `plugin.toml` manifests.
 
 ## Quick Start
 
@@ -51,22 +51,15 @@ Edit your `.csproj`:
     <ZeroClawAllowedHosts>api.example.com</ZeroClawAllowedHosts>
   </PropertyGroup>
 
-  <!-- Define your tools -->
   <ItemGroup>
-    <ZeroClawTool Include="greet"
-                  Description="Greet a user by name"
-                  Export="greet"
-                  RiskLevel="low"
-                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="ZeroClaw.PluginSdk" Version="0.1.*" />
+    <PackageReference Include="ZeroClaw.PluginSdk" Version="0.2.*" />
   </ItemGroup>
 </Project>
 ```
 
 ### 5. Write Your Plugin
+
+Just decorate your functions with `[ZeroClawFunction]` - tools are auto-discovered!
 
 ```csharp
 using System.Runtime.InteropServices;
@@ -78,15 +71,22 @@ public record GreetOutput(string Message);
 
 public static class MyPlugin
 {
-    // Required entry point for WASI
     public static void Main() { }
 
-    [PluginFunction("greet", Description = "Greet a user")]
+    [ZeroClawFunction("greet", "Greet a user by name")]
     [UnmanagedCallersOnly(EntryPoint = "greet")]
     public static int Greet()
     {
         return PluginEntryPoint.Invoke<GreetInput, GreetOutput>(input =>
             new GreetOutput($"Hello, {input.Name}!"));
+    }
+
+    [ZeroClawFunction("add", "Add two numbers", RiskLevel = "low")]
+    [UnmanagedCallersOnly(EntryPoint = "add")]
+    public static int Add()
+    {
+        return PluginEntryPoint.Invoke<AddInput, AddOutput>(input =>
+            new AddOutput(input.A + input.B));
     }
 }
 ```
@@ -94,7 +94,7 @@ public static class MyPlugin
 ### 6. Build & Publish
 
 ```bash
-# Build (generates plugin.toml)
+# Build (generates plugin.toml with auto-discovered tools)
 dotnet build -c Release
 
 # Publish (generates .wasm file + copies plugin.toml)
@@ -103,7 +103,28 @@ dotnet publish -c Release
 
 Your output will be in `bin/Release/net8.0/wasi-wasm/publish/`:
 - `MyPlugin.wasm` - The compiled WASM module
-- `plugin.toml` - The plugin manifest (auto-generated)
+- `plugin.toml` - The plugin manifest (auto-generated from attributes!)
+
+## Auto-Discovery with [ZeroClawFunction]
+
+The SDK automatically scans your source files for `[ZeroClawFunction]` attributes and generates the tools section of `plugin.toml`:
+
+```csharp
+// This attribute is all you need - no manual .csproj configuration required!
+[ZeroClawFunction("tool_name", "Description of what the tool does")]
+[UnmanagedCallersOnly(EntryPoint = "tool_name")]
+public static int MyTool() { ... }
+
+// With optional risk level
+[ZeroClawFunction("dangerous_tool", "Does something risky", RiskLevel = "high")]
+[UnmanagedCallersOnly(EntryPoint = "dangerous_tool")]
+public static int DangerousTool() { ... }
+```
+
+**Attribute Parameters:**
+- `name` (required): The tool name exposed to ZeroClaw
+- `description` (required): Human-readable description
+- `RiskLevel` (optional): `"low"` (default), `"medium"`, or `"high"`
 
 ## Plugin Configuration
 
@@ -120,31 +141,8 @@ Set these in your `.csproj` `<PropertyGroup>`:
 | `ZeroClawPermissions` | Comma-separated permissions | (none) |
 | `ZeroClawTimeoutMs` | Execution timeout in ms | `30000` |
 | `ZeroClawAllowedHosts` | Comma-separated allowed HTTP hosts | (none) |
-| `ZeroClawAllowedPaths` | Filesystem paths as `virtual=real` pairs | (none) |
 | `ZeroClawWasmPath` | WASM filename in plugin.toml | `$(AssemblyName).wasm` |
 | `ZeroClawGenerateManifest` | Enable/disable plugin.toml generation | `true` |
-
-### Tool Definitions
-
-Define tools with `<ZeroClawTool>` items:
-
-```xml
-<ItemGroup>
-  <ZeroClawTool Include="my_tool"
-                Description="What this tool does"
-                Export="my_tool"
-                RiskLevel="low"
-                ParametersSchema='{ "type": "object" }' />
-</ItemGroup>
-```
-
-| Attribute | Description |
-|-----------|-------------|
-| `Include` | Tool name |
-| `Description` | Human-readable description |
-| `Export` | WASM export name (entry point) |
-| `RiskLevel` | `"low"`, `"medium"`, or `"high"` |
-| `ParametersSchema` | JSON Schema for input parameters |
 
 ## SDK APIs
 
@@ -153,13 +151,8 @@ Define tools with `<ZeroClawTool>` items:
 Store and recall data from the agent's memory:
 
 ```csharp
-// Store a value
 Memory.Store("my_key", "my_value");
-
-// Recall memories matching a query
 string results = Memory.Recall("my_key");
-
-// Delete a memory
 Memory.Forget("my_key");
 ```
 
@@ -168,10 +161,7 @@ Memory.Forget("my_key");
 Send messages through configured channels:
 
 ```csharp
-// Get available channels
 List<string> channels = Messaging.GetChannels();
-
-// Send a message
 Messaging.Send("telegram", "user123", "Hello from my plugin!");
 ```
 
@@ -180,64 +170,25 @@ Messaging.Send("telegram", "user123", "Hello from my plugin!");
 Call other registered tools:
 
 ```csharp
-// Call another tool
 string result = Tools.ToolCall("search", new { query = "hello" });
 ```
 
 ### Entry Point Helpers
 
-The SDK handles JSON serialization automatically:
-
 ```csharp
-// For functions with input and output
+// With input and output
 PluginEntryPoint.Invoke<TInput, TOutput>(input => { ... });
 
-// For functions with input only
+// Input only
 PluginEntryPoint.Invoke<TInput>(input => { ... });
 
-// For functions with output only
+// Output only
 PluginEntryPoint.InvokeNoInput<TOutput>(() => { ... });
-```
-
-## Complete Example
-
-```csharp
-using System.Runtime.InteropServices;
-using Extism;
-using ZeroClaw.PluginSdk;
-
-public record SearchInput(string Query, int MaxResults);
-public record SearchOutput(List<string> Results, int Total);
-
-public static class SearchPlugin
-{
-    public static void Main() { }
-
-    [PluginFunction("search")]
-    [UnmanagedCallersOnly(EntryPoint = "search")]
-    public static int Search()
-    {
-        return PluginEntryPoint.Invoke<SearchInput, SearchOutput>(input =>
-        {
-            // Your search logic here
-            var results = new List<string> { "result1", "result2" };
-            
-            // Optionally store in memory
-            Memory.Store("last_query", input.Query);
-            
-            // Optionally notify
-            Messaging.Send("slack", "search-channel", 
-                $"Search performed: {input.Query}");
-            
-            return new SearchOutput(results, results.Count);
-        });
-    }
-}
 ```
 
 ## Generated plugin.toml
 
-The SDK automatically generates a `plugin.toml` like this:
+The SDK generates a manifest like this automatically:
 
 ```toml
 [plugin]
@@ -255,60 +206,48 @@ name = "greet"
 description = "Greet a user by name"
 export = "greet"
 risk_level = "low"
-parameters_schema = { "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }
+parameters_schema = { "type": "object" }
+
+[[tools]]
+name = "add"
+description = "Add two numbers"
+export = "add"
+risk_level = "low"
+parameters_schema = { "type": "object" }
 ```
 
 ## JSON Serialization
 
-The SDK uses `snake_case` JSON naming to match ZeroClaw's wire format:
-
+The SDK uses `snake_case` JSON naming:
 - C# `MyProperty` becomes JSON `my_property`
-- C# records work great: `record Input(string UserName)` becomes `{"user_name": "..."}`
+- Records work great: `record Input(string UserName)` becomes `{"user_name": "..."}`
 
 ## Error Handling
 
-Exceptions thrown in your handler are automatically caught and returned as error responses:
+Exceptions are automatically caught and returned as error responses:
 
 ```csharp
 PluginEntryPoint.Invoke<Input, Output>(input =>
 {
     if (string.IsNullOrEmpty(input.Name))
         throw new ArgumentException("Name is required");
-    
     return new Output(...);
 });
 // Returns: {"error": "Name is required", "success": false}
 ```
 
-For explicit error handling with host functions:
-
-```csharp
-try
-{
-    Memory.Store("key", "value");
-}
-catch (PluginException ex)
-{
-    // Handle host function errors
-}
-```
-
 ## Building from Source
 
 ```bash
-# Clone the repo
 git clone https://github.com/Biztactix-Ryan/zeroclaw-dotnetsdk.git
 cd zeroclaw-dotnetsdk
 
-# Build
 dotnet build
-
-# Run tests
 dotnet test
 
-# Build the sample plugin (requires wasi-experimental workload)
+# Build sample plugin (requires wasi-experimental workload)
 cd samples/HelloPlugin
-dotnet publish -c Release
+dotnet build -c Release
 ```
 
 ## License
