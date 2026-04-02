@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ZeroClaw.PluginSdk</RootNamespace>
+    <AssemblyName>ZeroClaw.PluginSdk</AssemblyName>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>ZeroClaw.PluginSdk</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>ZeroClaw Contributors</Authors>
+    <Company>ZeroClaw</Company>
+    <Description>SDK for building ZeroClaw WASM plugins in C#. Provides easy access to ZeroClaw's memory, messaging, and tool APIs with full JSON serialization support.</Description>
+    <PackageTags>zeroclaw;wasm;plugin;extism;ai;agent</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Biztactix-Ryan/zeroclaw</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Biztactix-Ryan/zeroclaw-dotnetsdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Enable XML documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Extism PDK - brings in all WASM dependencies automatically -->
+    <PackageReference Include="Extism.Pdk" Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!-- Include build targets in NuGet package -->
+  <ItemGroup>
+    <None Include="build/ZeroClaw.PluginSdk.props" Pack="true" PackagePath="build/" />
+    <None Include="build/ZeroClaw.PluginSdk.targets" Pack="true" PackagePath="build/" />
+  </ItemGroup>
+
+</Project>

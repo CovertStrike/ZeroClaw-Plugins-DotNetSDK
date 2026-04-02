@@ -1,0 +1,32 @@
+<Project>
+  <!-- Default ZeroClaw Plugin properties -->
+  <PropertyGroup>
+    <!-- Plugin metadata - users can override these -->
+    <ZeroClawPluginName Condition="'$(ZeroClawPluginName)' == ''">$(AssemblyName)</ZeroClawPluginName>
+    <ZeroClawPluginVersion Condition="'$(ZeroClawPluginVersion)' == ''">$(Version)</ZeroClawPluginVersion>
+    <ZeroClawPluginVersion Condition="'$(ZeroClawPluginVersion)' == ''">1.0.0</ZeroClawPluginVersion>
+    <ZeroClawPluginDescription Condition="'$(ZeroClawPluginDescription)' == ''">$(Description)</ZeroClawPluginDescription>
+    <ZeroClawPluginDescription Condition="'$(ZeroClawPluginDescription)' == ''">A ZeroClaw plugin</ZeroClawPluginDescription>
+
+    <!-- Capabilities: tool, skill, etc. (comma-separated) -->
+    <ZeroClawCapabilities Condition="'$(ZeroClawCapabilities)' == ''">tool</ZeroClawCapabilities>
+
+    <!-- Permissions: http_client, file_read, file_write, etc. (comma-separated) -->
+    <ZeroClawPermissions Condition="'$(ZeroClawPermissions)' == ''"></ZeroClawPermissions>
+
+    <!-- Timeout in milliseconds -->
+    <ZeroClawTimeoutMs Condition="'$(ZeroClawTimeoutMs)' == ''">30000</ZeroClawTimeoutMs>
+
+    <!-- Allowed HTTP hosts (comma-separated) -->
+    <ZeroClawAllowedHosts Condition="'$(ZeroClawAllowedHosts)' == ''"></ZeroClawAllowedHosts>
+
+    <!-- Allowed filesystem paths as virtual=real pairs (semicolon-separated) -->
+    <ZeroClawAllowedPaths Condition="'$(ZeroClawAllowedPaths)' == ''"></ZeroClawAllowedPaths>
+
+    <!-- Enable/disable plugin.toml generation -->
+    <ZeroClawGenerateManifest Condition="'$(ZeroClawGenerateManifest)' == ''">true</ZeroClawGenerateManifest>
+
+    <!-- WASM filename - set this if your output has a different name -->
+    <ZeroClawWasmPath Condition="'$(ZeroClawWasmPath)' == ''">$(AssemblyName).wasm</ZeroClawWasmPath>
+  </PropertyGroup>
+</Project>

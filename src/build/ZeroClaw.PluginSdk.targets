@@ -1,0 +1,92 @@
+<Project>
+  <!-- Generate plugin.toml after successful WASM build -->
+  <Target Name="GenerateZeroClawPluginManifest"
+          AfterTargets="Build"
+          Condition="'$(RuntimeIdentifier)' == 'wasi-wasm' AND '$(ZeroClawGenerateManifest)' == 'true'">
+
+    <PropertyGroup>
+      <_WasmFileName>$(ZeroClawWasmPath)</_WasmFileName>
+      <_PluginTomlPath>$(OutputPath)plugin.toml</_PluginTomlPath>
+    </PropertyGroup>
+
+    <!-- Split comma-separated strings into items if ItemGroups weren't used -->
+    <ItemGroup Condition="'@(ZeroClawCapability)' == '' AND '$(ZeroClawCapabilities)' != ''">
+      <_ZeroClawCapabilitySplit Include="$(ZeroClawCapabilities.Split(','))" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(ZeroClawPermission)' == '' AND '$(ZeroClawPermissions)' != ''">
+      <_ZeroClawPermissionSplit Include="$(ZeroClawPermissions.Split(','))" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(ZeroClawAllowedHost)' == '' AND '$(ZeroClawAllowedHosts)' != ''">
+      <_ZeroClawAllowedHostSplit Include="$(ZeroClawAllowedHosts.Split(','))" />
+    </ItemGroup>
+
+    <!-- Compute arrays -->
+    <PropertyGroup>
+      <_CapabilitiesArray Condition="'@(ZeroClawCapability)' != ''">@(ZeroClawCapability->'&quot;%(Identity)&quot;', ', ')</_CapabilitiesArray>
+      <_CapabilitiesArray Condition="'$(_CapabilitiesArray)' == '' AND '@(_ZeroClawCapabilitySplit)' != ''">@(_ZeroClawCapabilitySplit->'&quot;%(Identity)&quot;', ', ')</_CapabilitiesArray>
+      <_PermissionsArray Condition="'@(ZeroClawPermission)' != ''">@(ZeroClawPermission->'&quot;%(Identity)&quot;', ', ')</_PermissionsArray>
+      <_PermissionsArray Condition="'$(_PermissionsArray)' == '' AND '@(_ZeroClawPermissionSplit)' != ''">@(_ZeroClawPermissionSplit->'&quot;%(Identity)&quot;', ', ')</_PermissionsArray>
+      <_AllowedHostsArray Condition="'@(ZeroClawAllowedHost)' != ''">@(ZeroClawAllowedHost->'&quot;%(Identity)&quot;', ', ')</_AllowedHostsArray>
+      <_AllowedHostsArray Condition="'$(_AllowedHostsArray)' == '' AND '@(_ZeroClawAllowedHostSplit)' != ''">@(_ZeroClawAllowedHostSplit->'&quot;%(Identity)&quot;', ', ')</_AllowedHostsArray>
+    </PropertyGroup>
+
+    <!-- Build the plugin.toml content -->
+    <PropertyGroup>
+      <_PluginSection>
+[plugin]
+name = "$(ZeroClawPluginName)"
+version = "$(ZeroClawPluginVersion)"
+description = "$(ZeroClawPluginDescription)"
+wasm_path = "$(_WasmFileName)"
+capabilities = [$(_CapabilitiesArray)]
+</_PluginSection>
+      <_PluginSection Condition="'$(_PermissionsArray)' != ''">$(_PluginSection)permissions = [$(_PermissionsArray)]
+</_PluginSection>
+      <_PluginSection>$(_PluginSection)timeout_ms = $(ZeroClawTimeoutMs)
+</_PluginSection>
+      <_PluginSection Condition="'$(_AllowedHostsArray)' != ''">$(_PluginSection)allowed_hosts = [$(_AllowedHostsArray)]
+</_PluginSection>
+    </PropertyGroup>
+
+    <!-- Generate tools section -->
+    <PropertyGroup>
+      <_ToolsSection></_ToolsSection>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'@(ZeroClawTool)' != ''">
+      <_ToolsSection>@(ZeroClawTool->'
+[[tools]]
+name = &quot;%(Identity)&quot;
+description = &quot;%(Description)&quot;
+export = &quot;%(Export)&quot;
+risk_level = &quot;%(RiskLevel)&quot;
+parameters_schema = %(ParametersSchema)
+', '')</_ToolsSection>
+    </PropertyGroup>
+
+    <!-- Write the file -->
+    <WriteLinesToFile File="$(_PluginTomlPath)"
+                      Lines="$(_PluginSection)$(_ToolsSection)"
+                      Overwrite="true"
+                      Encoding="UTF-8" />
+
+    <Message Importance="high" Text="Generated plugin.toml at $(_PluginTomlPath)" />
+  </Target>
+
+  <!-- Copy plugin.toml to publish directory -->
+  <Target Name="CopyZeroClawPluginManifestToPublish"
+          AfterTargets="Publish"
+          Condition="'$(RuntimeIdentifier)' == 'wasi-wasm' AND '$(ZeroClawGenerateManifest)' == 'true'">
+
+    <PropertyGroup>
+      <_SourcePluginToml>$(OutputPath)plugin.toml</_SourcePluginToml>
+      <_DestPluginToml>$(PublishDir)plugin.toml</_DestPluginToml>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(_SourcePluginToml)"
+          DestinationFiles="$(_DestPluginToml)"
+          Condition="Exists('$(_SourcePluginToml)')" />
+
+    <Message Importance="high" Text="Copied plugin.toml to $(_DestPluginToml)" />
+  </Target>
+</Project>

@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>wasi-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HelloPlugin</RootNamespace>
+    <!-- Required for WASI/Extism builds -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <!-- ZeroClaw Plugin Metadata -->
+  <PropertyGroup>
+    <ZeroClawPluginName>hello-plugin</ZeroClawPluginName>
+    <ZeroClawPluginVersion>1.0.0</ZeroClawPluginVersion>
+    <ZeroClawPluginDescription>A sample ZeroClaw plugin demonstrating the C# SDK.</ZeroClawPluginDescription>
+    <ZeroClawCapabilities>tool</ZeroClawCapabilities>
+    <ZeroClawPermissions>http_client</ZeroClawPermissions>
+    <ZeroClawTimeoutMs>5000</ZeroClawTimeoutMs>
+    <ZeroClawAllowedHosts>api.example.com</ZeroClawAllowedHosts>
+  </PropertyGroup>
+
+  <!-- Define the tools this plugin exposes -->
+  <ItemGroup>
+    <ZeroClawTool Include="greet"
+                  Description="Greet a user by name"
+                  Export="greet"
+                  RiskLevel="low"
+                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
+
+    <ZeroClawTool Include="add"
+                  Description="Add two numbers together"
+                  Export="add"
+                  RiskLevel="low"
+                  ParametersSchema='{ "type": "object", "properties": { "a": { "type": "integer" }, "b": { "type": "integer" } }, "required": ["a", "b"] }' />
+
+    <ZeroClawTool Include="remember"
+                  Description="Store and recall data from memory"
+                  Export="remember"
+                  RiskLevel="medium"
+                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
+
+    <ZeroClawTool Include="notify"
+                  Description="Send a notification via messaging channels"
+                  Export="notify"
+                  RiskLevel="medium"
+                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
+
+    <ZeroClawTool Include="search_and_greet"
+                  Description="Search for info about a user and greet them"
+                  Export="search_and_greet"
+                  RiskLevel="medium"
+                  ParametersSchema='{ "type": "object", "properties": { "name": { "type": "string" } }, "required": ["name"] }' />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/ZeroClaw.PluginSdk.csproj" />
+  </ItemGroup>
+
+  <!-- Import build targets (normally done automatically via NuGet) -->
+  <Import Project="../../src/build/ZeroClaw.PluginSdk.props" />
+  <Import Project="../../src/build/ZeroClaw.PluginSdk.targets" />
+
+</Project>
